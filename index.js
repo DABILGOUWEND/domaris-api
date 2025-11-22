@@ -1,13 +1,15 @@
-require('dotenv').config();
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
+
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
 
 const app = express();
-app.use(cors());
+app.use(cors());              // tu pourras restreindre plus tard
 app.use(express.json());
 
-// Pool de connexion PostgreSQL
 const pool = new Pool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT || 5432,
@@ -16,29 +18,14 @@ const pool = new Pool({
   database: process.env.DB_NAME,
 });
 
-// Exemple de route : récupérer la liste des programmes
-app.get('/api/users', async (req, res) => {
+// Route de test pour vérifier DB + API
+app.get('/api/health', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, name, email FROM users ORDER BY id DESC');
-    res.json(result.rows);
+    const result = await pool.query('SELECT NOW() as now');
+    res.json({ status: 'ok', db_time: result.rows[0].now });
   } catch (err) {
-    console.error('Erreur requête programmes', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// Exemple POST pour créer un programme
-app.post('/api/users', async (req, res) => {
-  try {
-    const { name, email } = req.body;
-    const result = await pool.query(
-      'INSERT INTO users  (name, email) VALUES ($1, $2) RETURNING *',
-      [name, email]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error('Erreur création programme', err);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error('Erreur DB:', err);
+    res.status(500).json({ status: 'error', message: 'DB error' });
   }
 });
 
